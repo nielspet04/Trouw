@@ -4,6 +4,7 @@ import UploadMedia from './components/UploadMedia';
 import UploadVideo from './components/UploadVideo';
 import SpotifyRequest from './components/SpotifyRequest';
 import AdminGallery from './components/AdminGallery';
+import { getSavedGuestName, MAX_GUEST_NAME_LENGTH, saveGuestName } from './uploadSession';
 
 function App() {
   const [activeTab, setActiveTab] = useState('upload');
@@ -11,6 +12,7 @@ function App() {
   const [adminPassword, setAdminPassword] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminAuth, setAdminAuth] = useState('');
+  const [guestName, setGuestName] = useState(getSavedGuestName);
 
   const handleAdminLogin = (password) => {
     // Simple password check - change this to your desired password
@@ -64,6 +66,25 @@ function App() {
         </>
       ) : (
         <>
+          <section className="guest-name-panel">
+            <label className="guest-name-label" htmlFor="guest-name">
+              Jouw naam
+            </label>
+            <input
+              id="guest-name"
+              className="guest-name-input"
+              type="text"
+              value={guestName}
+              maxLength={MAX_GUEST_NAME_LENGTH}
+              onChange={(e) => {
+                setGuestName(e.target.value);
+                saveGuestName(e.target.value);
+              }}
+              placeholder="Bijvoorbeeld: Niels"
+              required
+            />
+          </section>
+
           <nav className="tabs">
             <button 
               className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
@@ -86,8 +107,8 @@ function App() {
           </nav>
 
           <main className="content">
-            {activeTab === 'upload' && <UploadMedia />}
-            {activeTab === 'video' && <UploadVideo />}
+            {activeTab === 'upload' && <UploadMedia guestName={guestName} />}
+            {activeTab === 'video' && <UploadVideo guestName={guestName} />}
             {activeTab === 'spotify' && <SpotifyRequest />}
           </main>
         </>

@@ -1,23 +1,17 @@
 import { useEffect, useState } from 'react';
 import axios from 'axios';
 import { API_BASE } from '../config';
-import {
-  getSavedGuestName,
-  getUploadSessionId,
-  MAX_GUEST_NAME_LENGTH,
-  saveGuestName
-} from '../uploadSession';
+import { getUploadSessionId, saveGuestName } from '../uploadSession';
 
 const MAX_VIDEO_UPLOADS = 1;
 
-export default function UploadVideo() {
+export default function UploadVideo({ guestName }) {
   const [video, setVideo] = useState(null);
   const [uploading, setUploading] = useState(false);
   const [message, setMessage] = useState('');
   const [progress, setProgress] = useState(0);
   const [sessionId] = useState(getUploadSessionId);
   const [remainingUploads, setRemainingUploads] = useState(MAX_VIDEO_UPLOADS);
-  const [guestName, setGuestName] = useState(getSavedGuestName);
 
   useEffect(() => {
     const loadUploadCount = async () => {
@@ -112,24 +106,6 @@ export default function UploadVideo() {
       <div className="upload-box">
         <h3>🎬 Upload je video</h3>
         <p className="upload-hint">Nog {remainingUploads} van {MAX_VIDEO_UPLOADS} video beschikbaar</p>
-
-        <label className="guest-name-label" htmlFor="video-guest-name">
-          Jouw naam
-        </label>
-        <input
-          id="video-guest-name"
-          className="guest-name-input"
-          type="text"
-          value={guestName}
-          maxLength={MAX_GUEST_NAME_LENGTH}
-          onChange={(e) => {
-            setGuestName(e.target.value);
-            saveGuestName(e.target.value);
-          }}
-          placeholder="Bijvoorbeeld: Niels"
-          disabled={uploading || remainingUploads <= 0}
-          required
-        />
 
         <input
           type="file"

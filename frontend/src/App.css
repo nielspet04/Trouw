@@ -106,6 +106,19 @@ body {
   font-size: 0.9em;
 }
 
+.guest-name-panel {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 18px;
+  margin-bottom: 16px;
+  animation: slideUp 0.6s ease-out 0.2s both;
+}
+
+.guest-name-panel .guest-name-input {
+  margin-bottom: 0;
+}
+
 /* Tabs */
 .tabs {
   display: flex;

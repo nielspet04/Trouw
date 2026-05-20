@@ -56,7 +56,17 @@ function App() {
     <div className="app">
       <header className="header">
         <h1>Trouw van Guy en Ria</h1>
-        <p>Deel je foto's, video, spraakbericht en favoriete nummer.</p>
+        <div className="intro-text">
+          <p>
+            Help ons een digitaal gastenboek vol echte momenten te maken. Deel je mooiste,
+            grappigste en zotste foto's of video, spreek een kort bericht in en request het
+            nummer dat volgens jou niet mag ontbreken op het feest.
+          </p>
+          <p>
+            Per gast kan je maximaal 5 foto's, 1 video, 1 spraakbericht en 1 liedje insturen.
+            Je liedje wordt meteen toegevoegd aan onze Spotify playlist.
+          </p>
+        </div>
       </header>
 
       {adminMode && adminUnlocked ? (

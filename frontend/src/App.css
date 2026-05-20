@@ -164,12 +164,16 @@ body::after {
   text-shadow: 0 2px 0 rgba(255, 255, 255, 0.65);
 }
 
-.header p {
+.intro-text {
   color: var(--muted);
-  font-size: 1rem;
-  line-height: 1.45;
-  max-width: 480px;
+  font-size: 0.98rem;
+  line-height: 1.5;
+  max-width: 640px;
   margin: 0 auto;
+}
+
+.intro-text p + p {
+  margin-top: 8px;
 }
 
 .app-footer {
@@ -1077,7 +1081,7 @@ body::after {
     font-size: 2.2rem;
   }
 
-  .header p {
+  .intro-text {
     font-size: 0.94rem;
   }
 

@@ -57,29 +57,7 @@ function App() {
       <header className="header">
         <h1>Trouw van Guy en Ria</h1>
         <p>Deel je foto's, video, spraakbericht en favoriete nummer.</p>
-        <button 
-          onClick={() => setAdminMode(!adminMode)}
-          className="admin-toggle"
-          aria-label="Admin"
-        >
-          Beheer
-        </button>
       </header>
-
-      {adminMode && !adminUnlocked && (
-        <div className="admin-login">
-          <h2>Admin Panel</h2>
-          <input
-            type="password"
-            placeholder="Voer wachtwoord in"
-            value={adminPassword}
-            onChange={(e) => setAdminPassword(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin(adminPassword)}
-          />
-          <button onClick={() => handleAdminLogin(adminPassword)}>Inloggen</button>
-          <button onClick={() => { setAdminMode(false); setAdminPassword(''); }}>Annuleren</button>
-        </div>
-      )}
 
       {adminMode && adminUnlocked ? (
         <>
@@ -157,6 +135,34 @@ function App() {
             {activeTab === 'spotify' && <SpotifyRequest guestName={guestName} />}
           </main>
         </>
+      )}
+
+      {!adminUnlocked && (
+        <footer className="app-footer">
+          <div className="footer-decoration" aria-hidden="true" />
+          <button
+            onClick={() => setAdminMode(!adminMode)}
+            className="admin-toggle"
+            aria-label="Admin"
+          >
+            Beheer
+          </button>
+
+          {adminMode && (
+            <div className="admin-login">
+              <h2>Admin Panel</h2>
+              <input
+                type="password"
+                placeholder="Voer wachtwoord in"
+                value={adminPassword}
+                onChange={(e) => setAdminPassword(e.target.value)}
+                onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin(adminPassword)}
+              />
+              <button onClick={() => handleAdminLogin(adminPassword)}>Inloggen</button>
+              <button onClick={() => { setAdminMode(false); setAdminPassword(''); }}>Annuleren</button>
+            </div>
+          )}
+        </footer>
       )}
     </div>
   );

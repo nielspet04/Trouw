@@ -3,7 +3,9 @@ import axios from 'axios';
 import { API_BASE } from '../config';
 
 const MAX_UPLOADS = 5;
+const MAX_GUEST_NAME_LENGTH = 80;
 const SESSION_STORAGE_KEY = 'trouw-upload-session-id';
+const GUEST_NAME_STORAGE_KEY = 'trouw-upload-guest-name';
 
 const getUploadSessionId = () => {
   const existing = localStorage.getItem(SESSION_STORAGE_KEY);
@@ -24,6 +26,7 @@ export default function UploadMedia() {
   const [progress, setProgress] = useState(0);
   const [sessionId] = useState(getUploadSessionId);
   const [remainingUploads, setRemainingUploads] = useState(MAX_UPLOADS);
+  const [guestName, setGuestName] = useState(() => localStorage.getItem(GUEST_NAME_STORAGE_KEY) || '');
 
   useEffect(() => {
     const loadUploadCount = async () => {
@@ -42,6 +45,13 @@ export default function UploadMedia() {
 
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files);
+    const cleanGuestName = guestName.trim();
+
+    if (!cleanGuestName) {
+      setMessage('⚠️ Vul eerst je naam in');
+      e.target.value = '';
+      return;
+    }
     
     if (remainingUploads <= 0) {
       setMessage('⚠️ Je hebt al 5 foto\'s geupload');
@@ -70,14 +80,23 @@ export default function UploadMedia() {
   };
 
   const handleUpload = async () => {
+    const cleanGuestName = guestName.trim().replace(/\s+/g, ' ');
+
+    if (!cleanGuestName) {
+      setMessage('⚠️ Vul eerst je naam in');
+      return;
+    }
+
     if (files.length === 0) {
       setMessage('⚠️ Selecteer eerst bestanden');
       return;
     }
 
+    localStorage.setItem(GUEST_NAME_STORAGE_KEY, cleanGuestName);
     setUploading(true);
     const formData = new FormData();
     formData.append('sessionId', sessionId);
+    formData.append('guestName', cleanGuestName);
     files.forEach(file => {
       formData.append('files', file);
     });
@@ -113,13 +132,31 @@ export default function UploadMedia() {
         <h3>📸 Upload je foto's</h3>
         <p className="upload-hint">Nog {remainingUploads} van {MAX_UPLOADS} foto's beschikbaar</p>
 
+        <label className="guest-name-label" htmlFor="guest-name">
+          Jouw naam
+        </label>
+        <input
+          id="guest-name"
+          className="guest-name-input"
+          type="text"
+          value={guestName}
+          maxLength={MAX_GUEST_NAME_LENGTH}
+          onChange={(e) => {
+            setGuestName(e.target.value);
+            localStorage.setItem(GUEST_NAME_STORAGE_KEY, e.target.value);
+          }}
+          placeholder="Bijvoorbeeld: Niels"
+          disabled={uploading || remainingUploads <= 0}
+          required
+        />
+
         <input
           type="file"
           id="file-input"
           multiple
           accept="image/jpeg,image/png,image/gif"
           onChange={handleFileSelect}
-          disabled={uploading || remainingUploads <= 0}
+          disabled={uploading || remainingUploads <= 0 || !guestName.trim()}
           style={{ display: 'none' }}
         />
 
@@ -142,7 +179,7 @@ export default function UploadMedia() {
 
         <button
           onClick={handleUpload}
-          disabled={uploading || files.length === 0 || remainingUploads <= 0}
+          disabled={uploading || files.length === 0 || remainingUploads <= 0 || !guestName.trim()}
           className="upload-btn"
         >
           {uploading ? `⏳ Uploading... ${progress}%` : '🚀 Upload'}

@@ -13,6 +13,8 @@ const app = express();
 const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 const MAX_UPLOADS_PER_SESSION = 5;
+const MAX_GUEST_NAME_LENGTH = 80;
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'guyenria123';
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : ['http://localhost:5173'];
@@ -63,6 +65,15 @@ const removeUploadedFiles = (files = []) => {
   });
 };
 
+const removeUploadFile = (filepath) => {
+  const filename = path.basename(filepath);
+  const fullPath = path.join(uploadDir, filename);
+
+  return fs.promises.unlink(fullPath).catch((err) => {
+    if (err.code !== 'ENOENT') throw err;
+  });
+};
+
 // Database setup
 const db = new sqlite3.Database(path.join(__dirname, 'trouw.db'));
 
@@ -75,9 +86,21 @@ db.serialize(() => {
       filepath TEXT NOT NULL,
       filetype TEXT NOT NULL,
       uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-      session_id TEXT
+      session_id TEXT,
+      guest_name TEXT
     )
   `);
+
+  db.all('PRAGMA table_info(uploads)', (err, columns) => {
+    if (err) return console.error('Failed to inspect uploads table:', err);
+
+    const hasGuestName = columns.some(column => column.name === 'guest_name');
+    if (!hasGuestName) {
+      db.run('ALTER TABLE uploads ADD COLUMN guest_name TEXT', (alterErr) => {
+        if (alterErr) console.error('Failed to add guest_name column:', alterErr);
+      });
+    }
+  });
 
   // Spotify requests table
   db.run(`
@@ -129,10 +152,21 @@ app.post('/api/upload', upload.array('files', 6), (req, res) => {
     }
 
     const sessionId = String(req.body.sessionId || '').trim();
+    const guestName = String(req.body.guestName || '').trim().replace(/\s+/g, ' ');
 
     if (!sessionId) {
       removeUploadedFiles(req.files);
       return res.status(400).json({ error: 'Sessie ontbreekt, herlaad de pagina en probeer opnieuw' });
+    }
+
+    if (!guestName) {
+      removeUploadedFiles(req.files);
+      return res.status(400).json({ error: 'Vul eerst je naam in' });
+    }
+
+    if (guestName.length > MAX_GUEST_NAME_LENGTH) {
+      removeUploadedFiles(req.files);
+      return res.status(400).json({ error: `Naam mag maximaal ${MAX_GUEST_NAME_LENGTH} tekens zijn` });
     }
 
     if (req.files.length > MAX_UPLOADS_PER_SESSION) {
@@ -166,11 +200,11 @@ app.post('/api/upload', upload.array('files', 6), (req, res) => {
       }));
 
       const insert = db.prepare(
-        'INSERT INTO uploads (filename, filepath, filetype, session_id) VALUES (?, ?, ?, ?)'
+        'INSERT INTO uploads (filename, filepath, filetype, session_id, guest_name) VALUES (?, ?, ?, ?, ?)'
       );
 
       uploaded.forEach(file => {
-        insert.run(file.filename, file.path, file.originalname.split('.').pop(), sessionId);
+        insert.run(file.filename, file.path, file.originalname.split('.').pop(), sessionId, guestName);
       });
 
       insert.finalize((finalizeErr) => {
@@ -234,6 +268,35 @@ app.get('/api/uploads', (req, res) => {
   db.all('SELECT * FROM uploads ORDER BY uploaded_at DESC', (err, rows) => {
     if (err) return res.status(500).json({ error: err.message });
     res.json(rows || []);
+  });
+});
+
+app.delete('/api/uploads/:id', (req, res) => {
+  if (req.get('x-admin-password') !== ADMIN_PASSWORD) {
+    return res.status(401).json({ error: 'Niet bevoegd' });
+  }
+
+  const uploadId = Number(req.params.id);
+
+  if (!Number.isInteger(uploadId)) {
+    return res.status(400).json({ error: 'Ongeldig upload id' });
+  }
+
+  db.get('SELECT * FROM uploads WHERE id = ?', [uploadId], async (err, uploadRow) => {
+    if (err) return res.status(500).json({ error: err.message });
+    if (!uploadRow) return res.status(404).json({ error: 'Upload niet gevonden' });
+
+    try {
+      await removeUploadFile(uploadRow.filepath);
+    } catch (fileErr) {
+      console.error('Failed to delete upload file:', fileErr);
+      return res.status(500).json({ error: 'Bestand verwijderen mislukt' });
+    }
+
+    db.run('DELETE FROM uploads WHERE id = ?', [uploadId], (deleteErr) => {
+      if (deleteErr) return res.status(500).json({ error: deleteErr.message });
+      res.json({ success: true, message: 'Foto verwijderd' });
+    });
   });
 });
 

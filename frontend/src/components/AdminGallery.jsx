@@ -2,10 +2,12 @@ import { useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import { API_BASE, MEDIA_BASE } from '../config';
 
-export default function AdminGallery() {
+export default function AdminGallery({ adminPassword }) {
   const [uploads, setUploads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all');
+  const [deletingId, setDeletingId] = useState(null);
+  const [message, setMessage] = useState('');
 
   const fetchUploads = useCallback(async () => {
     try {
@@ -37,10 +39,32 @@ export default function AdminGallery() {
     return true;
   });
 
+  const handleDelete = async (upload) => {
+    const confirmed = window.confirm(`Foto van ${upload.guest_name || 'onbekend'} verwijderen?`);
+    if (!confirmed) return;
+
+    setDeletingId(upload.id);
+    setMessage('');
+
+    try {
+      await axios.delete(`${API_BASE}/uploads/${upload.id}`, {
+        headers: { 'x-admin-password': adminPassword }
+      });
+      setUploads((currentUploads) => currentUploads.filter((item) => item.id !== upload.id));
+      setMessage('Foto verwijderd');
+    } catch (error) {
+      setMessage(`Verwijderen mislukt: ${error.response?.data?.error || error.message}`);
+      console.error('Failed to delete upload:', error);
+    } finally {
+      setDeletingId(null);
+    }
+  };
+
   return (
     <div className="admin-gallery">
       <h2>📸 Galerij - Alle uploads</h2>
       <p className="gallery-subtitle">{filteredUploads.length} bestanden</p>
+      {message && <p className="gallery-message">{message}</p>}
 
       <div className="gallery-filters">
         <button 
@@ -102,12 +126,21 @@ export default function AdminGallery() {
                 </a>
                 <div className="gallery-info">
                   <p className="gallery-filename">{upload.originalname || upload.filename}</p>
+                  <p className="gallery-guest">Door {upload.guest_name || 'Onbekend'}</p>
                   <p className="gallery-date">
                     {new Date(upload.uploaded_at).toLocaleDateString('nl-NL', {
                       hour: '2-digit',
                       minute: '2-digit'
                     })}
                   </p>
+                  <button
+                    type="button"
+                    className="delete-upload-btn"
+                    onClick={() => handleDelete(upload)}
+                    disabled={deletingId === upload.id}
+                  >
+                    {deletingId === upload.id ? 'Verwijderen...' : 'Verwijderen'}
+                  </button>
                 </div>
               </div>
             );

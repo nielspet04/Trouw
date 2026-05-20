@@ -9,12 +9,14 @@ function App() {
   const [adminMode, setAdminMode] = useState(false);
   const [adminPassword, setAdminPassword] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
+  const [adminAuth, setAdminAuth] = useState('');
 
   const handleAdminLogin = (password) => {
     // Simple password check - change this to your desired password
-    if (password === 'trouw2024') {
+    if (password === 'guyenria123') {
       setAdminUnlocked(true);
       setAdminMode(true);
+      setAdminAuth(password);
       setAdminPassword('');
     } else {
       alert('Onjuist wachtwoord');
@@ -51,9 +53,9 @@ function App() {
 
       {adminMode && adminUnlocked ? (
         <>
-          <AdminGallery />
+          <AdminGallery adminPassword={adminAuth} />
           <button 
-            onClick={() => { setAdminUnlocked(false); setAdminMode(false); }}
+            onClick={() => { setAdminUnlocked(false); setAdminMode(false); setAdminAuth(''); }}
             className="logout-btn"
           >
             Uitloggen

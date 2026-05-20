@@ -14,11 +14,13 @@ const PORT = process.env.PORT || 5000;
 const HOST = process.env.HOST || '0.0.0.0';
 const MAX_PHOTO_UPLOADS_PER_SESSION = 5;
 const MAX_VIDEO_UPLOADS_PER_SESSION = 1;
+const MAX_AUDIO_UPLOADS_PER_SESSION = 1;
 const MAX_GUEST_NAME_LENGTH = 80;
 const MAX_UPLOAD_SIZE_MB = Number(process.env.MAX_UPLOAD_SIZE_MB || 250);
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'guyenria123';
 const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif'];
 const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm'];
+const AUDIO_EXTENSIONS = ['webm', 'm4a', 'mp3', 'wav', 'ogg'];
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : ['http://localhost:5173'];
@@ -64,17 +66,26 @@ const upload = multer({
 const placeholders = (items) => items.map(() => '?').join(',');
 const photoExtensionPlaceholders = placeholders(PHOTO_EXTENSIONS);
 const videoExtensionPlaceholders = placeholders(VIDEO_EXTENSIONS);
+const audioExtensionPlaceholders = placeholders(AUDIO_EXTENSIONS);
 
 const getFileExtension = (filename) => path.extname(filename).slice(1).toLowerCase();
 const isPhotoFile = (file) => file.mimetype.startsWith('image/') && PHOTO_EXTENSIONS.includes(getFileExtension(file.originalname));
 const isVideoFile = (file) => file.mimetype.startsWith('video/') && VIDEO_EXTENSIONS.includes(getFileExtension(file.originalname));
+const isAudioFile = (file) => file.mimetype.startsWith('audio/') && AUDIO_EXTENSIONS.includes(getFileExtension(file.originalname));
 const countUploadsByType = (sessionId, type, callback) => {
-  const extensions = type === 'video' ? VIDEO_EXTENSIONS : PHOTO_EXTENSIONS;
-  const extensionPlaceholders = type === 'video' ? videoExtensionPlaceholders : photoExtensionPlaceholders;
+  const typeConfig = {
+    audio: { extensions: AUDIO_EXTENSIONS, placeholders: audioExtensionPlaceholders },
+    photo: { extensions: PHOTO_EXTENSIONS, placeholders: photoExtensionPlaceholders },
+    video: { extensions: VIDEO_EXTENSIONS, placeholders: videoExtensionPlaceholders }
+  };
+  const { extensions, placeholders: extensionPlaceholders } = typeConfig[type] || typeConfig.photo;
 
   db.get(
-    `SELECT COUNT(*) AS count FROM uploads WHERE session_id = ? AND LOWER(filetype) IN (${extensionPlaceholders})`,
-    [sessionId, ...extensions],
+    `SELECT COUNT(*) AS count
+     FROM uploads
+     WHERE session_id = ?
+       AND (media_type = ? OR (media_type IS NULL AND LOWER(filetype) IN (${extensionPlaceholders})))`,
+    [sessionId, type, ...extensions],
     callback
   );
 };
@@ -109,7 +120,8 @@ db.serialize(() => {
       filetype TEXT NOT NULL,
       uploaded_at DATETIME DEFAULT CURRENT_TIMESTAMP,
       session_id TEXT,
-      guest_name TEXT
+      guest_name TEXT,
+      media_type TEXT
     )
   `);
 
@@ -117,9 +129,15 @@ db.serialize(() => {
     if (err) return console.error('Failed to inspect uploads table:', err);
 
     const hasGuestName = columns.some(column => column.name === 'guest_name');
+    const hasMediaType = columns.some(column => column.name === 'media_type');
     if (!hasGuestName) {
       db.run('ALTER TABLE uploads ADD COLUMN guest_name TEXT', (alterErr) => {
         if (alterErr) console.error('Failed to add guest_name column:', alterErr);
+      });
+    }
+    if (!hasMediaType) {
+      db.run('ALTER TABLE uploads ADD COLUMN media_type TEXT', (alterErr) => {
+        if (alterErr) console.error('Failed to add media_type column:', alterErr);
       });
     }
   });
@@ -149,8 +167,13 @@ db.serialize(() => {
 
 app.get('/api/uploads/count', (req, res) => {
   const sessionId = String(req.query.sessionId || '').trim();
-  const uploadType = req.query.type === 'video' ? 'video' : 'photo';
-  const limit = uploadType === 'video' ? MAX_VIDEO_UPLOADS_PER_SESSION : MAX_PHOTO_UPLOADS_PER_SESSION;
+  const uploadType = ['audio', 'photo', 'video'].includes(req.query.type) ? req.query.type : 'photo';
+  const limitByType = {
+    audio: MAX_AUDIO_UPLOADS_PER_SESSION,
+    photo: MAX_PHOTO_UPLOADS_PER_SESSION,
+    video: MAX_VIDEO_UPLOADS_PER_SESSION
+  };
+  const limit = limitByType[uploadType];
 
   if (!sessionId) {
     return res.status(400).json({ error: 'Sessie ontbreekt' });
@@ -230,11 +253,11 @@ app.post('/api/upload', upload.array('files', 6), (req, res) => {
       }));
 
       const insert = db.prepare(
-        'INSERT INTO uploads (filename, filepath, filetype, session_id, guest_name) VALUES (?, ?, ?, ?, ?)'
+        'INSERT INTO uploads (filename, filepath, filetype, session_id, guest_name, media_type) VALUES (?, ?, ?, ?, ?, ?)'
       );
 
       uploaded.forEach(file => {
-        insert.run(file.filename, file.path, file.originalname.split('.').pop(), sessionId, guestName);
+        insert.run(file.filename, file.path, getFileExtension(file.originalname), sessionId, guestName, 'photo');
       });
 
       insert.finalize((finalizeErr) => {
@@ -306,8 +329,8 @@ app.post('/api/video-upload', upload.single('video'), (req, res) => {
       };
 
       db.run(
-        'INSERT INTO uploads (filename, filepath, filetype, session_id, guest_name) VALUES (?, ?, ?, ?, ?)',
-        [uploaded.filename, uploaded.path, getFileExtension(req.file.originalname), sessionId, guestName],
+        'INSERT INTO uploads (filename, filepath, filetype, session_id, guest_name, media_type) VALUES (?, ?, ?, ?, ?, ?)',
+        [uploaded.filename, uploaded.path, getFileExtension(req.file.originalname), sessionId, guestName, 'video'],
         (insertErr) => {
           if (insertErr) {
             removeUploadedFiles([req.file]);
@@ -327,6 +350,81 @@ app.post('/api/video-upload', upload.single('video'), (req, res) => {
     removeUploadedFiles(req.file ? [req.file] : []);
     console.error('Video upload error:', error);
     res.status(500).json({ error: 'Video upload mislukt' });
+  }
+});
+
+app.post('/api/audio-upload', upload.single('audio'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Geen spraakbericht geupload' });
+    }
+
+    const sessionId = String(req.body.sessionId || '').trim();
+    const guestName = String(req.body.guestName || '').trim().replace(/\s+/g, ' ');
+
+    if (!sessionId) {
+      removeUploadedFiles([req.file]);
+      return res.status(400).json({ error: 'Sessie ontbreekt, herlaad de pagina en probeer opnieuw' });
+    }
+
+    if (!guestName) {
+      removeUploadedFiles([req.file]);
+      return res.status(400).json({ error: 'Vul eerst je naam in' });
+    }
+
+    if (guestName.length > MAX_GUEST_NAME_LENGTH) {
+      removeUploadedFiles([req.file]);
+      return res.status(400).json({ error: `Naam mag maximaal ${MAX_GUEST_NAME_LENGTH} tekens zijn` });
+    }
+
+    if (!isAudioFile(req.file)) {
+      removeUploadedFiles([req.file]);
+      return res.status(400).json({ error: 'Alleen audio-opnames toegestaan' });
+    }
+
+    countUploadsByType(sessionId, 'audio', (err, row) => {
+      if (err) {
+        removeUploadedFiles([req.file]);
+        return res.status(500).json({ error: err.message });
+      }
+
+      const currentCount = row?.count || 0;
+      const remaining = MAX_AUDIO_UPLOADS_PER_SESSION - currentCount;
+
+      if (remaining <= 0) {
+        removeUploadedFiles([req.file]);
+        return res.status(400).json({ error: 'Je hebt al 1 spraakbericht geupload' });
+      }
+
+      const uploaded = {
+        filename: req.file.filename,
+        originalname: req.file.originalname,
+        size: req.file.size,
+        path: `/uploads/${req.file.filename}`
+      };
+
+      db.run(
+        'INSERT INTO uploads (filename, filepath, filetype, session_id, guest_name, media_type) VALUES (?, ?, ?, ?, ?, ?)',
+        [uploaded.filename, uploaded.path, getFileExtension(req.file.originalname), sessionId, guestName, 'audio'],
+        (insertErr) => {
+          if (insertErr) {
+            removeUploadedFiles([req.file]);
+            return res.status(500).json({ error: insertErr.message });
+          }
+
+          res.json({
+            success: true,
+            file: uploaded,
+            remaining: remaining - 1,
+            message: 'Spraakbericht succesvol geupload'
+          });
+        }
+      );
+    });
+  } catch (error) {
+    removeUploadedFiles(req.file ? [req.file] : []);
+    console.error('Audio upload error:', error);
+    res.status(500).json({ error: 'Spraakbericht upload mislukt' });
   }
 });
 

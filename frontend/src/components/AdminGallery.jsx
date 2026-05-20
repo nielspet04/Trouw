@@ -30,17 +30,22 @@ export default function AdminGallery({ adminPassword }) {
     const ext = filename.split('.').pop().toLowerCase();
     if (['jpg', 'jpeg', 'png', 'gif'].includes(ext)) return 'image';
     if (['mp4', 'mov', 'webm'].includes(ext)) return 'video';
+    if (['m4a', 'mp3', 'wav', 'ogg'].includes(ext)) return 'audio';
     return 'file';
   };
 
+  const getUploadType = (upload) => upload.media_type || getFileType(upload.filename);
+
   const filteredUploads = uploads.filter(upload => {
-    if (filter === 'images') return getFileType(upload.filename) === 'image';
-    if (filter === 'videos') return getFileType(upload.filename) === 'video';
+    const uploadType = getUploadType(upload);
+    if (filter === 'images') return uploadType === 'photo' || uploadType === 'image';
+    if (filter === 'videos') return uploadType === 'video';
+    if (filter === 'audio') return uploadType === 'audio';
     return true;
   });
 
   const handleDelete = async (upload) => {
-    const confirmed = window.confirm(`Foto van ${upload.guest_name || 'onbekend'} verwijderen?`);
+    const confirmed = window.confirm(`Upload van ${upload.guest_name || 'onbekend'} verwijderen?`);
     if (!confirmed) return;
 
     setDeletingId(upload.id);
@@ -83,7 +88,13 @@ export default function AdminGallery({ adminPassword }) {
           className={`filter-btn ${filter === 'videos' ? 'active' : ''}`}
           onClick={() => setFilter('videos')}
         >
-          Video's ({uploads.filter(u => getFileType(u.filename) === 'video').length})
+          Video's ({uploads.filter(u => getUploadType(u) === 'video').length})
+        </button>
+        <button
+          className={`filter-btn ${filter === 'audio' ? 'active' : ''}`}
+          onClick={() => setFilter('audio')}
+        >
+          Spraak ({uploads.filter(u => getUploadType(u) === 'audio').length})
         </button>
       </div>
 
@@ -98,8 +109,10 @@ export default function AdminGallery({ adminPassword }) {
       ) : (
         <div className="gallery-grid">
           {filteredUploads.map((upload) => {
-            const isImage = getFileType(upload.filename) === 'image';
-            const isVideo = getFileType(upload.filename) === 'video';
+            const uploadType = getUploadType(upload);
+            const isImage = uploadType === 'photo' || uploadType === 'image';
+            const isVideo = uploadType === 'video';
+            const isAudio = uploadType === 'audio';
             
             return (
               <div key={upload.id} className="gallery-item">
@@ -123,6 +136,16 @@ export default function AdminGallery({ adminPassword }) {
                         controls
                         preload="metadata"
                       />
+                    )}
+                    {isAudio && (
+                      <div className="audio-preview">
+                        <span>🎙️</span>
+                        <audio
+                          src={`${MEDIA_BASE}${upload.filepath}`}
+                          controls
+                          preload="metadata"
+                        />
+                      </div>
                     )}
                   </div>
                 </a>

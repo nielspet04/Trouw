@@ -2,6 +2,7 @@ import { useState } from 'react';
 import './App.css';
 import UploadMedia from './components/UploadMedia';
 import UploadVideo from './components/UploadVideo';
+import UploadVoice from './components/UploadVoice';
 import SpotifyRequest from './components/SpotifyRequest';
 import AdminGallery from './components/AdminGallery';
 import { getSavedGuestName, MAX_GUEST_NAME_LENGTH, saveGuestName } from './uploadSession';
@@ -99,6 +100,12 @@ function App() {
               🎬 Video
             </button>
             <button 
+              className={`tab ${activeTab === 'voice' ? 'active' : ''}`}
+              onClick={() => setActiveTab('voice')}
+            >
+              🎙️ Bericht
+            </button>
+            <button 
               className={`tab ${activeTab === 'spotify' ? 'active' : ''}`}
               onClick={() => setActiveTab('spotify')}
             >
@@ -109,6 +116,7 @@ function App() {
           <main className="content">
             {activeTab === 'upload' && <UploadMedia guestName={guestName} />}
             {activeTab === 'video' && <UploadVideo guestName={guestName} />}
+            {activeTab === 'voice' && <UploadVoice guestName={guestName} />}
             {activeTab === 'spotify' && <SpotifyRequest />}
           </main>
         </>

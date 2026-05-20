@@ -12,18 +12,18 @@ export default function UploadMedia() {
   const handleFileSelect = (e) => {
     const selectedFiles = Array.from(e.target.files);
     
-    // Limit to 6 files (5 photos + 1 video)
-    if (selectedFiles.length > 6) {
-      setMessage('⚠️ Maximum 6 bestanden toegestaan');
+    // Limit to 5 files (photos only, no videos)
+    if (selectedFiles.length > 5) {
+      setMessage('⚠️ Maximum 5 foto\'s toegestaan');
       return;
     }
 
-    // Check file types
-    const validTypes = ['image/jpeg', 'image/png', 'image/gif', 'video/mp4', 'video/quicktime'];
+    // Check file types - only images
+    const validTypes = ['image/jpeg', 'image/png', 'image/gif'];
     const invalidFiles = selectedFiles.filter(f => !validTypes.includes(f.type));
 
     if (invalidFiles.length > 0) {
-      setMessage('❌ Alleen foto\'s (JPG, PNG, GIF) en video\'s (MP4, MOV) toegestaan');
+      setMessage('❌ Alleen foto\'s (JPG, PNG, GIF) toegestaan');
       return;
     }
 
@@ -70,14 +70,14 @@ export default function UploadMedia() {
   return (
     <div className="upload-media">
       <div className="upload-box">
-        <h3>📸 Upload je foto's en video's</h3>
-        <p className="upload-hint">Maximum 5 foto's + 1 video</p>
+        <h3>📸 Upload je foto's</h3>
+        <p className="upload-hint">Maximum 5 foto's</p>
 
         <input
           type="file"
           id="file-input"
           multiple
-          accept="image/jpeg,image/png,image/gif,video/mp4,video/quicktime"
+          accept="image/jpeg,image/png,image/gif"
           onChange={handleFileSelect}
           disabled={uploading}
           style={{ display: 'none' }}

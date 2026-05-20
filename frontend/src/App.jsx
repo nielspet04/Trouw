@@ -1,54 +1,87 @@
-import { useState, useRef } from 'react';
+import { useState } from 'react';
 import './App.css';
-import QRScanner from './components/QRScanner';
 import UploadMedia from './components/UploadMedia';
 import SpotifyRequest from './components/SpotifyRequest';
+import AdminGallery from './components/AdminGallery';
 
 function App() {
   const [activeTab, setActiveTab] = useState('upload');
-  const [scanned, setScanned] = useState(false);
+  const [adminMode, setAdminMode] = useState(false);
+  const [adminPassword, setAdminPassword] = useState('');
+  const [adminUnlocked, setAdminUnlocked] = useState(false);
 
-  const handleQRSuccess = (data) => {
-    console.log('QR Scanned:', data);
-    setScanned(true);
-    setActiveTab('upload');
+  const handleAdminLogin = (password) => {
+    // Simple password check - change this to your desired password
+    if (password === 'trouw2024') {
+      setAdminUnlocked(true);
+      setAdminMode(true);
+      setAdminPassword('');
+    } else {
+      alert('Onjuist wachtwoord');
+    }
   };
 
   return (
     <div className="app">
       <header className="header">
-        <h1>🎉 Trouwfeest App TESST</h1>
+        <h1>🎉 Trouwfeest App</h1>
         <p>Deel fotos, video's en request nummers!</p>
+        <button 
+          onClick={() => setAdminMode(!adminMode)}
+          style={{ marginTop: '15px', fontSize: '0.8em', opacity: 0.6 }}
+        >
+          👤
+        </button>
       </header>
 
-      {!scanned && (
-        <div className="qr-section">
-          <h2>Scan QR Code</h2>
-          <QRScanner onSuccess={handleQRSuccess} />
+      {adminMode && !adminUnlocked && (
+        <div className="admin-login">
+          <h2>Admin Panel</h2>
+          <input
+            type="password"
+            placeholder="Voer wachtwoord in"
+            value={adminPassword}
+            onChange={(e) => setAdminPassword(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && handleAdminLogin(adminPassword)}
+          />
+          <button onClick={() => handleAdminLogin(adminPassword)}>Inloggen</button>
+          <button onClick={() => { setAdminMode(false); setAdminPassword(''); }}>Annuleren</button>
         </div>
       )}
 
-      {scanned && (
-        <nav className="tabs">
+      {adminMode && adminUnlocked ? (
+        <>
+          <AdminGallery />
           <button 
-            className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
-            onClick={() => setActiveTab('upload')}
+            onClick={() => { setAdminUnlocked(false); setAdminMode(false); }}
+            className="logout-btn"
           >
-            📸 Upload Media
+            Uitloggen
           </button>
-          <button 
-            className={`tab ${activeTab === 'spotify' ? 'active' : ''}`}
-            onClick={() => setActiveTab('spotify')}
-          >
-            🎵 Request Nummer
-          </button>
-        </nav>
-      )}
+        </>
+      ) : (
+        <>
+          <nav className="tabs">
+            <button 
+              className={`tab ${activeTab === 'upload' ? 'active' : ''}`}
+              onClick={() => setActiveTab('upload')}
+            >
+              📸 Upload Media
+            </button>
+            <button 
+              className={`tab ${activeTab === 'spotify' ? 'active' : ''}`}
+              onClick={() => setActiveTab('spotify')}
+            >
+              🎵 Request Nummer
+            </button>
+          </nav>
 
-      <main className="content">
-        {activeTab === 'upload' && scanned && <UploadMedia />}
-        {activeTab === 'spotify' && scanned && <SpotifyRequest />}
-      </main>
+          <main className="content">
+            {activeTab === 'upload' && <UploadMedia />}
+            {activeTab === 'spotify' && <SpotifyRequest />}
+          </main>
+        </>
+      )}
     </div>
   );
 }

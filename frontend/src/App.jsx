@@ -17,7 +17,7 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1>🎉 Trouwfeest App</h1>
+        <h1>🎉 Trouwfeest App TESST</h1>
         <p>Deel fotos, video's en request nummers!</p>
       </header>
 

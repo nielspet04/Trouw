@@ -4,6 +4,7 @@ const dotenv = require('dotenv');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const https = require('https');
 const sqlite3 = require('sqlite3').verbose();
 
 dotenv.config();
@@ -181,10 +182,31 @@ app.use((err, req, res, next) => {
   res.status(500).json({ error: 'Server error' });
 });
 
-// Start server
-app.listen(PORT, () => {
-  console.log(`🎉 Backend server running op http://localhost:${PORT}`);
-  console.log(`Database: sqlite3 @ ./trouw.db`);
-});
-
-module.exports = app;
+// Start server with HTTPS in production
+if (process.env.NODE_ENV === 'production') {
+  const certPath = process.env.CERT_PATH || path.join(__dirname, 'server.crt');
+  const keyPath = process.env.KEY_PATH || path.join(__dirname, 'server.key');
+  
+  if (fs.existsSync(certPath) && fs.existsSync(keyPath)) {
+    const credentials = {
+      cert: fs.readFileSync(certPath, 'utf8'),
+      key: fs.readFileSync(keyPath, 'utf8')
+    };
+    https.createServer(credentials, app).listen(PORT, () => {
+      console.log(`🎉 Backend server running on https://5.22.208.187:${PORT}`);
+      console.log(`Database: sqlite3 @ ./trouw.db`);
+    });
+  } else {
+    // Fallback to HTTP if certs don't exist
+    app.listen(PORT, () => {
+      console.log(`🎉 Backend server running on http://5.22.208.187:${PORT}`);
+      console.log(`ℹ️ For camera access, set up HTTPS with SSL certificates`);
+      console.log(`Database: sqlite3 @ ./trouw.db`);
+    });
+  }
+} else {
+  app.listen(PORT, () => {
+    console.log(`🎉 Backend server running on http://localhost:${PORT}`);
+    console.log(`Database: sqlite3 @ ./trouw.db`);
+  });
+}

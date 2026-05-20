@@ -661,10 +661,10 @@ app.delete('/api/spotify/requests/:id', (req, res) => {
       if (requestRow.added_to_playlist && trackUri) {
         const config = requireSpotifyConfig();
         await spotifyApiFetch(
-          `https://api.spotify.com/v1/playlists/${config.playlistId}/tracks`,
+          `https://api.spotify.com/v1/playlists/${config.playlistId}/items`,
           {
             method: 'DELETE',
-            body: JSON.stringify({ tracks: [{ uri: trackUri }] })
+            body: JSON.stringify({ items: [{ uri: trackUri }] })
           }
         );
       }

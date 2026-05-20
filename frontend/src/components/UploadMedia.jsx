@@ -129,19 +129,45 @@ export default function UploadMedia({ guestName }) {
           style={{ display: 'none' }}
         />
 
-        <label
-          htmlFor="file-input"
-          className="file-label"
-          onClick={(e) => {
-            if (!guestName.trim()) {
-              e.preventDefault();
-              alert('Vul eerst je naam in voordat je foto\'s selecteert.');
-              setMessage('⚠️ Vul eerst je naam in');
-            }
-          }}
-        >
-          📁 Selecteer bestanden
-        </label>
+        <input
+          type="file"
+          id="camera-input"
+          accept="image/*"
+          capture="environment"
+          onChange={handleFileSelect}
+          disabled={uploading || remainingUploads <= 0 || !guestName.trim()}
+          style={{ display: 'none' }}
+        />
+
+        <div className="file-actions">
+          <label
+            htmlFor="camera-input"
+            className="file-label"
+            onClick={(e) => {
+              if (!guestName.trim()) {
+                e.preventDefault();
+                alert('Vul eerst je naam in voordat je een foto maakt.');
+                setMessage('⚠️ Vul eerst je naam in');
+              }
+            }}
+          >
+            📷 Maak foto
+          </label>
+
+          <label
+            htmlFor="file-input"
+            className="file-label"
+            onClick={(e) => {
+              if (!guestName.trim()) {
+                e.preventDefault();
+                alert('Vul eerst je naam in voordat je foto\'s selecteert.');
+                setMessage('⚠️ Vul eerst je naam in');
+              }
+            }}
+          >
+            📁 Kies foto's
+          </label>
+        </div>
 
         {files.length > 0 && (
           <div className="file-list">

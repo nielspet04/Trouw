@@ -271,6 +271,17 @@ body {
   border: none;
 }
 
+.file-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 18px;
+}
+
+.file-actions .file-label {
+  margin-bottom: 0;
+}
+
 .file-label:hover {
   transform: translateY(-4px);
   box-shadow: 0 12px 24px rgba(29, 185, 84, 0.4);

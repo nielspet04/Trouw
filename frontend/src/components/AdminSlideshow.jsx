@@ -219,7 +219,10 @@ export default function AdminSlideshow({ onExit, onLogout }) {
                 </p>
               )}
               {nowPlaying.lyrics?.provider && (
-                <p className="lyrics-provider">Lyrics via {nowPlaying.lyrics.provider}</p>
+                <p className="lyrics-provider">
+                  Lyrics via {nowPlaying.lyrics.provider}
+                  {!nowPlaying.lyrics.synced && visibleLyrics.length > 0 ? ' - timing benaderd' : ''}
+                </p>
               )}
             </div>
           </div>

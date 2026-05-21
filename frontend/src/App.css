@@ -929,6 +929,14 @@ body::after {
   animation: fadeIn 0.6s ease-out;
 }
 
+.admin-view-switch {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
 .admin-gallery h2 {
   margin-bottom: 8px;
 }
@@ -1177,6 +1185,168 @@ body::after {
 .delete-upload-btn:disabled {
   opacity: 0.55;
   cursor: not-allowed;
+}
+
+/* Slideshow */
+.app-slideshow-mode {
+  max-width: none;
+  padding: 0;
+  min-height: 100vh;
+}
+
+.slideshow-page {
+  width: 100%;
+  min-height: 100vh;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 340px;
+  background:
+    radial-gradient(circle at 16% 12%, rgba(208, 177, 127, 0.16), transparent 18rem),
+    linear-gradient(135deg, #3f4b3a 0%, var(--sage-deep) 48%, #2f372c 100%);
+  color: var(--paper);
+  overflow: hidden;
+}
+
+.slideshow-stage {
+  position: relative;
+  min-width: 0;
+  padding: 24px;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 18px;
+}
+
+.slideshow-topbar {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 18px;
+}
+
+.slideshow-topbar .hero-kicker {
+  margin-bottom: 4px;
+  color: var(--gold);
+  font-size: 0.9rem;
+}
+
+.slideshow-topbar h1 {
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: clamp(2rem, 4vw, 4.2rem);
+  line-height: 1;
+  font-weight: 500;
+}
+
+.slideshow-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.slideshow-actions button {
+  border: 1px solid rgba(248, 244, 235, 0.28);
+  background: rgba(248, 244, 235, 0.12);
+  color: var(--paper);
+  border-radius: 8px;
+  padding: 9px 11px;
+  font-weight: 800;
+  cursor: pointer;
+}
+
+.slideshow-frame {
+  position: relative;
+  min-height: 0;
+  border: 1px solid rgba(248, 244, 235, 0.22);
+  border-radius: 8px;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, 0.24);
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.slideshow-frame img,
+.slideshow-frame video {
+  width: 100%;
+  height: 100%;
+  max-height: calc(100vh - 150px);
+  object-fit: contain;
+  display: block;
+}
+
+.slideshow-caption {
+  position: absolute;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 14px;
+  padding: 12px 14px;
+  border-radius: 8px;
+  background: rgba(47, 55, 44, 0.72);
+  color: var(--paper);
+  backdrop-filter: blur(10px);
+}
+
+.slideshow-caption span {
+  color: var(--gold);
+  font-weight: 800;
+}
+
+.slideshow-sidebar {
+  position: relative;
+  border-left: 1px solid rgba(248, 244, 235, 0.18);
+  background:
+    linear-gradient(180deg, rgba(248, 244, 235, 0.95), rgba(242, 234, 220, 0.95));
+  color: var(--text);
+  padding: 28px 22px;
+  overflow-y: auto;
+}
+
+.slideshow-sidebar h2 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--sage-deep);
+  font-size: 1.8rem;
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 8px;
+}
+
+.slideshow-song-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.slideshow-song {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 250, 240, 0.72);
+}
+
+.slideshow-song .order {
+  min-width: 28px;
+  padding: 5px 8px;
+}
+
+.slideshow-empty {
+  color: rgba(248, 244, 235, 0.82);
+  text-align: center;
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.5rem;
+  padding: 24px;
+}
+
+.slideshow-empty.compact {
+  color: var(--muted);
+  font-family: inherit;
+  font-size: 0.95rem;
 }
 
 @keyframes slideDown {

@@ -5,6 +5,7 @@ import UploadVideo from './components/UploadVideo';
 import UploadVoice from './components/UploadVoice';
 import SpotifyRequest from './components/SpotifyRequest';
 import AdminGallery from './components/AdminGallery';
+import AdminSlideshow from './components/AdminSlideshow';
 import { getSavedGuestName, MAX_GUEST_NAME_LENGTH, resetUploadSession, saveGuestName } from './uploadSession';
 
 function App() {
@@ -13,16 +14,19 @@ function App() {
   const [adminPassword, setAdminPassword] = useState('');
   const [adminUnlocked, setAdminUnlocked] = useState(false);
   const [adminAuth, setAdminAuth] = useState('');
+  const [adminView, setAdminView] = useState('gallery');
   const [guestName, setGuestName] = useState(getSavedGuestName);
   const guestNameInputRef = useRef(null);
 
   const hasGuestName = guestName.trim().length > 0;
+  const isSlideshowMode = adminUnlocked && adminView === 'slideshow';
 
   const handleAdminLogin = (password) => {
     // Simple password check - change this to your desired password
     if (password === 'guyenria123') {
       setAdminUnlocked(true);
       setAdminMode(true);
+      setAdminView('gallery');
       setAdminAuth(password);
       setAdminPassword('');
     } else {
@@ -49,11 +53,13 @@ function App() {
     setAdminUnlocked(false);
     setAdminMode(false);
     setAdminAuth('');
+    setAdminView('gallery');
     alert('Nieuwe gast-sessie aangemaakt voor dit apparaat.');
   };
 
   return (
-    <div className="app">
+    <div className={`app ${isSlideshowMode ? 'app-slideshow-mode' : ''}`}>
+      {!isSlideshowMode && (
       <header className="header">
         <div className="hero-sparkles" aria-hidden="true" />
         <p className="hero-kicker">Jouw momenten, ons gastenboek</p>
@@ -76,9 +82,21 @@ function App() {
           </div>
         </div>
       </header>
+      )}
 
-      {adminMode && adminUnlocked ? (
+      {adminMode && adminUnlocked && adminView === 'slideshow' ? (
+        <AdminSlideshow
+          onExit={() => setAdminView('gallery')}
+          onLogout={() => { setAdminUnlocked(false); setAdminMode(false); setAdminAuth(''); setAdminView('gallery'); }}
+        />
+      ) : adminMode && adminUnlocked ? (
         <>
+          <div className="admin-view-switch">
+            <button type="button" className="filter-btn active">Beheer</button>
+            <button type="button" className="filter-btn" onClick={() => setAdminView('slideshow')}>
+              Slideshow
+            </button>
+          </div>
           <AdminGallery adminPassword={adminAuth} />
           <button
             onClick={handleResetCurrentDevice}
@@ -87,7 +105,7 @@ function App() {
             Nieuwe testsessie voor dit apparaat
           </button>
           <button 
-            onClick={() => { setAdminUnlocked(false); setAdminMode(false); setAdminAuth(''); }}
+            onClick={() => { setAdminUnlocked(false); setAdminMode(false); setAdminAuth(''); setAdminView('gallery'); }}
             className="logout-btn"
           >
             Uitloggen

@@ -1396,6 +1396,83 @@ body::after {
   padding: 5px 8px;
 }
 
+.now-playing-card {
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: rgba(255, 250, 240, 0.76);
+  padding: 16px;
+  box-shadow: 0 16px 36px rgba(84, 98, 75, 0.1);
+}
+
+.now-playing-cover {
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: cover;
+  border-radius: 8px;
+  margin-bottom: 14px;
+  box-shadow: 0 14px 28px rgba(84, 98, 75, 0.18);
+}
+
+.now-playing-status {
+  display: inline-flex;
+  align-items: center;
+  border: 1px solid rgba(196, 165, 105, 0.46);
+  border-radius: 8px;
+  color: var(--sage-deep);
+  background: rgba(217, 213, 186, 0.26);
+  font-size: 0.78rem;
+  font-weight: 800;
+  padding: 5px 8px;
+  margin-bottom: 10px;
+}
+
+.now-playing-card h3 {
+  font-family: Georgia, "Times New Roman", serif;
+  color: var(--sage-deep);
+  font-size: 1.7rem;
+  line-height: 1.05;
+  font-weight: 500;
+  margin-bottom: 7px;
+}
+
+.now-playing-progress {
+  height: 9px;
+  border-radius: 999px;
+  background: rgba(121, 138, 114, 0.18);
+  overflow: hidden;
+  margin-top: 16px;
+}
+
+.now-playing-progress span {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--gold-deep), var(--sage));
+  transition: width 0.25s ease;
+}
+
+.now-playing-times {
+  display: flex;
+  justify-content: space-between;
+  color: var(--muted);
+  font-size: 0.78rem;
+  margin-top: 6px;
+}
+
+.lyrics-panel {
+  margin-top: 18px;
+  padding: 13px;
+  border: 1px dashed rgba(121, 138, 114, 0.32);
+  border-radius: 8px;
+  background: rgba(217, 213, 186, 0.18);
+}
+
+.lyrics-panel p:last-child {
+  color: var(--muted);
+  font-size: 0.88rem;
+  line-height: 1.45;
+}
+
 .slideshow-empty {
   color: rgba(248, 244, 235, 0.82);
   text-align: center;

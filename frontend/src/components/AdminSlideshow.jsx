@@ -6,7 +6,7 @@ const SLIDE_DURATION_MS = 8000;
 
 export default function AdminSlideshow({ onExit, onLogout }) {
   const [uploads, setUploads] = useState([]);
-  const [songRequests, setSongRequests] = useState([]);
+  const [nowPlaying, setNowPlaying] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
 
@@ -15,14 +15,14 @@ export default function AdminSlideshow({ onExit, onLogout }) {
 
     const loadInitialSlideshowData = async () => {
       try {
-        const [uploadsResponse, songsResponse] = await Promise.all([
+        const [uploadsResponse, nowPlayingResponse] = await Promise.all([
           axios.get(`${API_BASE}/uploads`),
-          axios.get(`${API_BASE}/spotify/requests`)
+          axios.get(`${API_BASE}/spotify/now-playing`)
         ]);
 
         if (isMounted) {
           setUploads(uploadsResponse.data || []);
-          setSongRequests(songsResponse.data || []);
+          setNowPlaying(nowPlayingResponse.data || null);
         }
       } catch (error) {
         console.error('Failed to load slideshow data:', error);
@@ -35,13 +35,13 @@ export default function AdminSlideshow({ onExit, onLogout }) {
 
     const refreshInterval = setInterval(async () => {
       try {
-        const [uploadsResponse, songsResponse] = await Promise.all([
+        const [uploadsResponse, nowPlayingResponse] = await Promise.all([
           axios.get(`${API_BASE}/uploads`),
-          axios.get(`${API_BASE}/spotify/requests`)
+          axios.get(`${API_BASE}/spotify/now-playing`)
         ]);
 
         setUploads(uploadsResponse.data || []);
-        setSongRequests(songsResponse.data || []);
+        setNowPlaying(nowPlayingResponse.data || null);
       } catch (error) {
         console.error('Failed to refresh slideshow data:', error);
       }
@@ -61,14 +61,21 @@ export default function AdminSlideshow({ onExit, onLogout }) {
       || ['jpg', 'jpeg', 'png', 'gif', 'mp4', 'mov', 'webm'].includes(ext);
   }), [uploads]);
 
-  const upcomingSongs = useMemo(() => [...songRequests]
-    .sort((a, b) => new Date(a.requested_at) - new Date(b.requested_at))
-    .slice(0, 10), [songRequests]);
-
   const safeCurrentIndex = slides.length ? currentIndex % slides.length : 0;
   const currentSlide = slides[safeCurrentIndex];
   const currentExt = currentSlide?.filename?.split('.').pop().toLowerCase();
   const isVideo = currentSlide?.media_type === 'video' || ['mp4', 'mov', 'webm'].includes(currentExt);
+  const track = nowPlaying?.track;
+  const progressPercent = track?.durationMs
+    ? Math.min(100, Math.round(((nowPlaying.progressMs || 0) / track.durationMs) * 100))
+    : 0;
+
+  const formatTime = (milliseconds = 0) => {
+    const totalSeconds = Math.floor(milliseconds / 1000);
+    const minutes = Math.floor(totalSeconds / 60);
+    const seconds = totalSeconds % 60;
+    return `${minutes}:${String(seconds).padStart(2, '0')}`;
+  };
 
   useEffect(() => {
     if (slides.length <= 1) return undefined;
@@ -147,24 +154,40 @@ export default function AdminSlideshow({ onExit, onLogout }) {
 
       <aside className="slideshow-sidebar">
         <div className="footer-decoration" aria-hidden="true" />
-        <h2>Liedjes voor straks</h2>
-        <p className="gallery-subtitle">{upcomingSongs.length} requests in beeld</p>
+        <h2>Nu op Spotify</h2>
+        <p className="gallery-subtitle">Live vanaf jullie gekoppelde account</p>
 
-        {upcomingSongs.length > 0 ? (
-          <div className="slideshow-song-list">
-            {upcomingSongs.map((song, idx) => (
-              <div key={song.id} className="slideshow-song">
-                <span className="order">{idx + 1}</span>
-                <div className="request-info">
-                  <p className="request-track">{song.track_name}</p>
-                  <p className="request-artist">{song.artist_name}</p>
-                  <p className="request-artist">door {song.guest_name || 'Onbekend'}</p>
-                </div>
-              </div>
-            ))}
+        {track ? (
+          <div className="now-playing-card">
+            {track.image && (
+              <img className="now-playing-cover" src={track.image} alt="" />
+            )}
+            <p className="now-playing-status">{nowPlaying.isPlaying ? 'Speelt nu' : 'Gepauzeerd'}</p>
+            <h3>{track.name}</h3>
+            <p className="request-artist">{track.artist}</p>
+            {track.album && <p className="request-artist">{track.album}</p>}
+
+            <div className="now-playing-progress" aria-label="Voortgang">
+              <span style={{ width: `${progressPercent}%` }} />
+            </div>
+            <div className="now-playing-times">
+              <span>{formatTime(nowPlaying.progressMs)}</span>
+              <span>{formatTime(track.durationMs)}</span>
+            </div>
+
+            <div className="lyrics-panel">
+              <p className="current-song-label">Lyrics</p>
+              <p>
+                Live lyrics kunnen niet automatisch via Spotify Web API worden opgehaald.
+                Gebruik dit scherm voor het nummer en de voortgang, of koppel later een
+                officiële/licensed lyrics-bron.
+              </p>
+            </div>
           </div>
         ) : (
-          <p className="slideshow-empty compact">Nog geen liedjes aangevraagd.</p>
+          <p className="slideshow-empty compact">
+            Er speelt momenteel geen Spotify nummer, of Spotify moet opnieuw gekoppeld worden.
+          </p>
         )}
       </aside>
     </div>

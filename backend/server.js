@@ -23,7 +23,7 @@ const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'guyenria123';
 const PHOTO_EXTENSIONS = ['jpg', 'jpeg', 'png', 'gif'];
 const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm'];
 const AUDIO_EXTENSIONS = ['webm', 'm4a', 'mp3', 'wav', 'ogg'];
-const SPOTIFY_SCOPE = 'playlist-modify-public playlist-modify-private';
+const SPOTIFY_SCOPE = 'playlist-modify-public playlist-modify-private user-read-currently-playing';
 const SPOTIFY_MARKET = process.env.SPOTIFY_MARKET || 'BE';
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
@@ -699,6 +699,51 @@ app.get('/api/spotify/status', async (req, res) => {
     configured: Boolean(config.clientId && config.clientSecret && config.playlistId),
     connected: Boolean(refreshToken)
   });
+});
+
+app.get('/api/spotify/now-playing', async (req, res) => {
+  try {
+    const accessToken = await getSpotifyAccessToken();
+    const response = await fetch('https://api.spotify.com/v1/me/player/currently-playing?additional_types=track', {
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    });
+
+    if (response.status === 204) {
+      return res.json({ isPlaying: false, track: null });
+    }
+
+    const payload = await response.json().catch(() => ({}));
+
+    if (!response.ok) {
+      const message = payload.error?.message || payload.error_description || payload.error || 'Spotify currently playing ophalen mislukt';
+      throw new Error(`Spotify ${response.status}: ${message}`);
+    }
+
+    const item = payload.item;
+    if (!item || item.type !== 'track') {
+      return res.json({ isPlaying: Boolean(payload.is_playing), track: null });
+    }
+
+    res.json({
+      isPlaying: Boolean(payload.is_playing),
+      progressMs: payload.progress_ms || 0,
+      fetchedAt: Date.now(),
+      track: {
+        id: item.id,
+        name: item.name,
+        artist: item.artists?.map(artist => artist.name).join(', ') || '',
+        album: item.album?.name || '',
+        durationMs: item.duration_ms || 0,
+        image: item.album?.images?.[0]?.url || item.album?.images?.[1]?.url || item.album?.images?.[2]?.url || '',
+        externalUrl: item.external_urls?.spotify || ''
+      }
+    });
+  } catch (error) {
+    console.error('Spotify now playing error:', error);
+    res.status(500).json({ error: error.message });
+  }
 });
 
 // Spotify: Get all requests

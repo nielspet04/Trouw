@@ -146,7 +146,7 @@ export default function AdminSlideshow({ onExit, onLogout }) {
         <div className="slideshow-topbar">
           <div>
             <p className="hero-kicker">Trouw van Guy en Ria</p>
-            <h1>Jouw momenten, ons gastenboek</h1>
+            <h1>Voeg nu ook je foto's toe op www.trouwguyenria.nl</h1>
           </div>
           <div className="slideshow-actions">
             <button type="button" onClick={showPrevious}>Vorige</button>

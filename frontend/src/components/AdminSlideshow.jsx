@@ -161,9 +161,19 @@ export default function AdminSlideshow({ onExit, onLogout }) {
     <div className="slideshow-page">
       <section className="slideshow-stage">
         <div className="slideshow-topbar">
-          <div>
+          <div className="slideshow-title-block">
             <p className="hero-kicker">Trouw van Guy en Ria</p>
-            <h1>Voeg nu ook je foto's toe op www.trouwguyenria.nl</h1>
+            <div className="slideshow-cta">
+              <div>
+                <p className="slideshow-cta-label">Voeg nu ook je foto's toe op</p>
+                <h1>www.trouwguyenria.nl</h1>
+              </div>
+              <img
+                className="slideshow-qr"
+                src="/slideshow-qr.png"
+                alt="QR-code naar trouwguyenria.nl"
+              />
+            </div>
           </div>
           <div className="slideshow-actions">
             <button type="button" onClick={showPrevious}>Vorige</button>

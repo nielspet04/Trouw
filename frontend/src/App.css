@@ -1467,10 +1467,40 @@ body::after {
   background: rgba(217, 213, 186, 0.18);
 }
 
-.lyrics-panel p:last-child {
+.lyrics-panel > p:last-child {
   color: var(--muted);
   font-size: 0.88rem;
   line-height: 1.45;
+}
+
+.lyrics-lines {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-height: 160px;
+  justify-content: center;
+}
+
+.lyrics-lines p {
+  color: rgba(63, 68, 58, 0.54);
+  font-family: Georgia, "Times New Roman", serif;
+  font-size: 1.02rem;
+  line-height: 1.22;
+  text-align: center;
+  transition: all 0.25s ease;
+}
+
+.lyrics-lines p.active {
+  color: var(--sage-deep);
+  font-size: 1.28rem;
+  font-weight: 700;
+}
+
+.lyrics-provider {
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 0.76rem;
+  text-align: center;
 }
 
 .slideshow-empty {

@@ -9,6 +9,7 @@ export default function AdminSlideshow({ onExit, onLogout }) {
   const [nowPlaying, setNowPlaying] = useState(null);
   const [currentIndex, setCurrentIndex] = useState(0);
   const [loading, setLoading] = useState(true);
+  const [clock, setClock] = useState(0);
 
   useEffect(() => {
     let isMounted = true;
@@ -66,9 +67,23 @@ export default function AdminSlideshow({ onExit, onLogout }) {
   const currentExt = currentSlide?.filename?.split('.').pop().toLowerCase();
   const isVideo = currentSlide?.media_type === 'video' || ['mp4', 'mov', 'webm'].includes(currentExt);
   const track = nowPlaying?.track;
-  const progressPercent = track?.durationMs
-    ? Math.min(100, Math.round(((nowPlaying.progressMs || 0) / track.durationMs) * 100))
+  const liveProgressMs = track
+    ? Math.min(
+      track.durationMs || nowPlaying.progressMs || 0,
+      (nowPlaying.progressMs || 0) + (nowPlaying.isPlaying ? Math.max(0, clock - (nowPlaying.fetchedAt || clock)) : 0)
+    )
     : 0;
+  const progressPercent = track?.durationMs
+    ? Math.min(100, Math.round((liveProgressMs / track.durationMs) * 100))
+    : 0;
+  const lyricLines = nowPlaying?.lyrics?.lines || [];
+  const activeLyricIndex = lyricLines.reduce((activeIndex, line, index) => (
+    line.timeMs <= liveProgressMs ? index : activeIndex
+  ), -1);
+  const visibleLyrics = lyricLines.slice(
+    Math.max(0, activeLyricIndex - 2),
+    Math.min(lyricLines.length, Math.max(activeLyricIndex + 3, 5))
+  );
 
   const formatTime = (milliseconds = 0) => {
     const totalSeconds = Math.floor(milliseconds / 1000);
@@ -86,6 +101,14 @@ export default function AdminSlideshow({ onExit, onLogout }) {
 
     return () => clearInterval(slideInterval);
   }, [slides.length]);
+
+  useEffect(() => {
+    const clockInterval = setInterval(() => {
+      setClock(Date.now());
+    }, 1000);
+
+    return () => clearInterval(clockInterval);
+  }, []);
 
   const showPrevious = () => {
     if (slides.length === 0) return;
@@ -171,17 +194,33 @@ export default function AdminSlideshow({ onExit, onLogout }) {
               <span style={{ width: `${progressPercent}%` }} />
             </div>
             <div className="now-playing-times">
-              <span>{formatTime(nowPlaying.progressMs)}</span>
+              <span>{formatTime(liveProgressMs)}</span>
               <span>{formatTime(track.durationMs)}</span>
             </div>
 
             <div className="lyrics-panel">
               <p className="current-song-label">Lyrics</p>
-              <p>
-                Live lyrics kunnen niet automatisch via Spotify Web API worden opgehaald.
-                Gebruik dit scherm voor het nummer en de voortgang, of koppel later een
-                officiële/licensed lyrics-bron.
-              </p>
+              {visibleLyrics.length > 0 ? (
+                <div className="lyrics-lines">
+                  {visibleLyrics.map((line) => (
+                    <p
+                      key={`${line.timeMs}-${line.text}`}
+                      className={line.timeMs <= liveProgressMs ? 'active' : ''}
+                    >
+                      {line.text}
+                    </p>
+                  ))}
+                </div>
+              ) : (
+                <p>
+                  {nowPlaying.lyrics?.status === 'missing-key'
+                    ? 'Voeg MUSIXMATCH_API_KEY toe om live lyrics te tonen.'
+                    : 'Geen gesynchroniseerde lyrics gevonden voor dit nummer.'}
+                </p>
+              )}
+              {nowPlaying.lyrics?.provider && (
+                <p className="lyrics-provider">Lyrics via {nowPlaying.lyrics.provider}</p>
+              )}
             </div>
           </div>
         ) : (

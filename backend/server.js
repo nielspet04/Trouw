@@ -25,6 +25,8 @@ const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm'];
 const AUDIO_EXTENSIONS = ['webm', 'm4a', 'mp3', 'wav', 'ogg'];
 const SPOTIFY_SCOPE = 'playlist-modify-public playlist-modify-private user-read-currently-playing';
 const SPOTIFY_MARKET = process.env.SPOTIFY_MARKET || 'BE';
+const MUSIXMATCH_API_KEY = process.env.MUSIXMATCH_API_KEY || '';
+const MUSIXMATCH_COUNTRY = process.env.MUSIXMATCH_COUNTRY || 'BE';
 const allowedOrigins = process.env.CORS_ORIGINS
   ? process.env.CORS_ORIGINS.split(',').map(origin => origin.trim()).filter(Boolean)
   : ['http://localhost:5173'];
@@ -235,6 +237,104 @@ const removeSpotifyPlaylistTrack = async (trackUri) => {
       body: JSON.stringify({ items: [{ uri: trackUri }] })
     }
   );
+};
+
+const parseLrcTimestamp = (timestamp) => {
+  const match = timestamp.match(/^(\d{1,2}):(\d{2})(?:\.(\d{1,3}))?$/);
+  if (!match) return null;
+
+  const minutes = Number(match[1]);
+  const seconds = Number(match[2]);
+  const fraction = match[3] || '0';
+  return (minutes * 60 * 1000) + (seconds * 1000) + Number(fraction.padEnd(3, '0'));
+};
+
+const parseLrc = (subtitleBody = '') => subtitleBody
+  .split('\n')
+  .map((line) => {
+    const match = line.match(/^\[(\d{1,2}:\d{2}(?:\.\d{1,3})?)\]\s*(.*)$/);
+    if (!match) return null;
+    const timeMs = parseLrcTimestamp(match[1]);
+    const text = match[2].trim();
+    if (timeMs === null || !text) return null;
+    return { timeMs, text };
+  })
+  .filter(Boolean);
+
+const musixmatchFetch = async (method, params = {}) => {
+  if (!MUSIXMATCH_API_KEY) {
+    throw new Error('Musixmatch API key ontbreekt');
+  }
+
+  const url = new URL(`https://api.musixmatch.com/ws/1.1/${method}`);
+  url.searchParams.set('apikey', MUSIXMATCH_API_KEY);
+  url.searchParams.set('country', MUSIXMATCH_COUNTRY);
+
+  Object.entries(params).forEach(([key, value]) => {
+    if (value !== undefined && value !== null && value !== '') {
+      url.searchParams.set(key, value);
+    }
+  });
+
+  const response = await fetch(url.toString());
+  const payload = await response.json().catch(() => ({}));
+  const statusCode = payload.message?.header?.status_code || response.status;
+
+  if (!response.ok || statusCode >= 400) {
+    throw new Error(`Musixmatch ${statusCode}: lyrics niet beschikbaar`);
+  }
+
+  return payload.message?.body || {};
+};
+
+const getMusixmatchLyrics = async ({ name, artist, durationMs }) => {
+  if (!MUSIXMATCH_API_KEY || !name || !artist) {
+    return {
+      provider: 'Musixmatch',
+      status: MUSIXMATCH_API_KEY ? 'missing-track' : 'missing-key',
+      synced: false,
+      lines: []
+    };
+  }
+
+  try {
+    const matchedBody = await musixmatchFetch('matcher.track.get', {
+      q_track: name,
+      q_artist: artist
+    });
+    const matchedTrack = matchedBody.track;
+
+    if (!matchedTrack?.track_id) {
+      return { provider: 'Musixmatch', status: 'not-found', synced: false, lines: [] };
+    }
+
+    const subtitleBody = await musixmatchFetch('track.subtitle.get', {
+      track_id: matchedTrack.track_id,
+      subtitle_format: 'LRC',
+      f_subtitle_length: durationMs ? Math.round(durationMs / 1000) : undefined,
+      f_subtitle_length_max_deviation: 10
+    });
+    const subtitle = subtitleBody.subtitle;
+    const lines = parseLrc(subtitle?.subtitle_body || '');
+
+    return {
+      provider: 'Musixmatch',
+      status: lines.length ? 'ok' : 'empty',
+      synced: lines.length > 0,
+      language: subtitle?.subtitle_language || '',
+      copyright: subtitle?.lyrics_copyright || '',
+      lines
+    };
+  } catch (error) {
+    console.error('Musixmatch lyrics error:', error);
+    return {
+      provider: 'Musixmatch',
+      status: 'unavailable',
+      synced: false,
+      lines: [],
+      error: error.message
+    };
+  }
 };
 
 db.serialize(() => {
@@ -725,20 +825,23 @@ app.get('/api/spotify/now-playing', async (req, res) => {
     if (!item || item.type !== 'track') {
       return res.json({ isPlaying: Boolean(payload.is_playing), track: null });
     }
+    const track = {
+      id: item.id,
+      name: item.name,
+      artist: item.artists?.map(artist => artist.name).join(', ') || '',
+      album: item.album?.name || '',
+      durationMs: item.duration_ms || 0,
+      image: item.album?.images?.[0]?.url || item.album?.images?.[1]?.url || item.album?.images?.[2]?.url || '',
+      externalUrl: item.external_urls?.spotify || ''
+    };
+    const lyrics = await getMusixmatchLyrics(track);
 
     res.json({
       isPlaying: Boolean(payload.is_playing),
       progressMs: payload.progress_ms || 0,
       fetchedAt: Date.now(),
-      track: {
-        id: item.id,
-        name: item.name,
-        artist: item.artists?.map(artist => artist.name).join(', ') || '',
-        album: item.album?.name || '',
-        durationMs: item.duration_ms || 0,
-        image: item.album?.images?.[0]?.url || item.album?.images?.[1]?.url || item.album?.images?.[2]?.url || '',
-        externalUrl: item.external_urls?.spotify || ''
-      }
+      track,
+      lyrics
     });
   } catch (error) {
     console.error('Spotify now playing error:', error);

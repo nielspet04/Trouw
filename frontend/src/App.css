@@ -1578,11 +1578,31 @@ body::after {
   }
 
   .admin-song-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .admin-song-item {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    aspect-ratio: auto;
+    min-height: 0;
+    overflow: visible;
+  }
+
+  .admin-song-item .request-info {
+    min-width: 0;
   }
 
   .add-btn,
   .admin-song-delete {
     width: 100%;
+  }
+
+  .admin-song-delete {
+    grid-column: 1 / -1;
+    min-height: 44px;
+    padding: 10px 12px;
+    touch-action: manipulation;
   }
 }
